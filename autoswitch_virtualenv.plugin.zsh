@@ -1,5 +1,5 @@
 export AUTOSWITCH_VERSION="3.3.0"
-export AUTOSWITCH_FILE=".venv"
+export AUTOSWITCH_VIRTUAL_ENV_DIR=".venv"
 
 RED="\e[31m"
 GREEN="\e[32m"
@@ -25,7 +25,11 @@ function _virtual_env_dir() {
     local venv_name="$1"
     local VIRTUAL_ENV_DIR="${AUTOSWITCH_VIRTUAL_ENV_DIR:-$HOME/.virtualenvs}"
     mkdir -p "$VIRTUAL_ENV_DIR"
-    printf "%s/%s" "$VIRTUAL_ENV_DIR" "$venv_name"
+    if [[ "$VIRTUAL_ENV_DIR" == "$AUTOSWITCH_VIRTUAL_ENV_DIR" ]]; then
+        printf "$VIRTUAL_ENV_DIR"
+    else
+        printf "%s/%s" "$VIRTUAL_ENV_DIR" "$venv_name"
+    fi
 }
 
 
@@ -64,7 +68,14 @@ function _get_venv_type() {
 function _get_venv_name() {
     local venv_dir="$1"
     local venv_type="$2"
-    local venv_name="$(basename "$venv_dir")"
+    if [[ "$venv_type" == "virtualenv" && "$venv_dir" != "/"* ]]; then
+        local venv_name="$(basename "$(realpath "$(dirname "$PWD/$AUTOSWITCH_VIRTUAL_ENV_DIR")")")"
+    elif [[ "$venv_type" == "default_virtualenv" && "$venv_dir" != "/"* ]]; then
+        local venv_name="$(basename "$(realpath "$(dirname "$AUTOSWITCH_DEFAULTENV/$AUTOSWITCH_VIRTUAL_ENV_DIR")")")"
+    else
+        # poetry, pipenv or absolute path
+        local venv_name="$(basename "$venv_dir")"
+    fi
 
     # clear pipenv from the extra identifiers at the end
     if [[ "$venv_type" == "pipenv" ]]; then
@@ -95,7 +106,13 @@ function _maybeworkon() {
             return
         fi
 
-        local py_version="$(_python_version "$venv_dir/bin/python")"
+        if [[ "$venv_type" == "default_virtualenv" ]]; then
+            local py_version="$(_python_version "$HOME/.virtualenvs/$AUTOSWITCH_DEFAULTENV/bin/python")"
+        elif [[ "$venv_type" == "virtualenv" ]]; then
+            local py_version="$(_python_version "$PWD/$venv_dir/bin/python")"
+        else
+            local py_version="$(_python_version "$venv_dir/bin/python")"
+        fi
         local message="${AUTOSWITCH_MESSAGE_FORMAT:-"$DEFAULT_MESSAGE_FORMAT"}"
         message="${message//\%venv_type/$venv_type}"
         message="${message//\%venv_name/$venv_name}"
@@ -109,7 +126,14 @@ function _maybeworkon() {
         fi
 
         # Much faster to source the activate file directly rather than use the `workon` command
-        local activate_script="$venv_dir/bin/activate"
+        if [[ "$venv_type" == "default_virtualenv" && "$venv_dir" != "/"* ]]; then
+            local activate_script="$HOME/.virtualenvs/$AUTOSWITCH_DEFAULTENV/bin/activate"
+        elif [[ "$venv_type" == "virtualenv" && "$venv_dir" != "/"* ]]; then
+            local activate_script="$PWD/$venv_dir/bin/activate"
+        else
+            # poetry, pipenv or absolute path
+            local activate_script="${venv_dir%'/'}/bin/activate"
+        fi
 
         _validated_source "$activate_script"
     fi
@@ -121,8 +145,8 @@ function _check_path()
 {
     local check_dir="$1"
 
-    if [[ -f "${check_dir}/${AUTOSWITCH_FILE}" ]]; then
-        printf "${check_dir}/${AUTOSWITCH_FILE}"
+    if [[ -d "${check_dir}/${AUTOSWITCH_VIRTUAL_ENV_DIR}" ]]; then
+        printf "${check_dir}/${AUTOSWITCH_VIRTUAL_ENV_DIR}"
         return
     elif [[ -f "${check_dir}/poetry.lock" ]]; then
         printf "${check_dir}/poetry.lock"
@@ -160,14 +184,14 @@ function _activate_pipenv() {
 }
 
 
-# Automatically switch virtualenv when $AUTOSWITCH_FILE file detected
+# Automatically switch virtualenv when $AUTOSWITCH_VIRTUAL_ENV_DIR directory detected
 function check_venv()
 {
     local file_owner
     local file_permissions
 
-    # Get the $AUTOSWITCH_FILE, scanning parent directories
-    local venv_path="$(_check_path "$PWD")"
+    # Get the $AUTOSWITCH_VIRTUAL_ENV_DIR, scanning parent directories
+    local venv_path="$(_check_path "$PWD/$AUTOSWITCH_VIRTUAL_ENV_DIR")"
 
     if [[ -n "$venv_path" ]]; then
 
@@ -182,12 +206,12 @@ function check_venv()
 
         if [[ "$file_owner" != "$(id -u)" ]]; then
             printf "AUTOSWITCH WARNING: Virtualenv will not be activated\n\n"
-            printf "Reason: Found a $AUTOSWITCH_FILE file but it is not owned by the current user\n"
+            printf "Reason: Found a $AUTOSWITCH_VIRTUAL_ENV_DIR directory but it is not owned by the current user\n"
             printf "Change ownership of ${PURPLE}$venv_path${NORMAL} to ${PURPLE}'$USER'${NORMAL} to fix this\n"
-        elif ! [[ "$file_permissions" =~ ^[64][04][04]$ ]]; then
+        elif ! [[ "$file_permissions" =~ ^[764][04][04]$ ]]; then
             printf "AUTOSWITCH WARNING: Virtualenv will not be activated\n\n"
-            printf "Reason: Found a $AUTOSWITCH_FILE file with weak permission settings ($file_permissions).\n"
-            printf "Run the following command to fix this: ${PURPLE}\"chmod 600 $venv_path\"${NORMAL}\n"
+            printf "Reason: Found a $AUTOSWITCH_VIRTUAL_ENV_DIR directory with weak permission settings ($file_permissions).\n"
+            printf "Run the following command to fix this: ${PURPLE}\"chmod 700 $venv_path\"${NORMAL}\n"
         else
             if [[ "$venv_path" == *"/Pipfile" ]] && type "pipenv" > /dev/null; then
                 if _activate_pipenv; then
@@ -221,7 +245,7 @@ function _default_venv()
 {
     local venv_type="$(_get_venv_type "$OLDPWD")"
     if [[ -n "$AUTOSWITCH_DEFAULTENV" ]]; then
-        _maybeworkon "$(_virtual_env_dir "$AUTOSWITCH_DEFAULTENV")" "$venv_type"
+        _maybeworkon "$(_virtual_env_dir "$AUTOSWITCH_DEFAULTENV")" "default_$venv_type"
     elif [[ -n "$VIRTUAL_ENV" ]]; then
         local venv_name="$(_get_venv_name "$VIRTUAL_ENV" "$venv_type")"
         _autoswitch_message "Deactivating: ${BOLD}${PURPLE}%s${NORMAL}\n" "$venv_name"

@@ -2,17 +2,26 @@
 
 @setup {
 
-    if [[ ! -d "$HOME/.cache/pypoetry/virtualenvs/poetry-foo" ]]; then
+    POETRY_FOO="$HOME/.cache/pypoetry/virtualenvs/poetry-foo"
+    if [[ ! -d "$POETRY_FOO" ]]; then
         echo "Creating poetry test virtualenv"
-        run virtualenv "$HOME/.cache/pypoetry/virtualenvs/poetry-foo" --python=python3
+        run virtualenv "$POETRY_FOO" --python=python3
     fi
-    if [[ ! -d "$HOME/.virtualenvs/foobar/" ]]; then
-        echo "Creating test virtualenv"
-        run virtualenv "$HOME/.virtualenvs/foobar" --python=python3
+
+    PIPENV_FOO="$HOME/.virtualenvs/pipenv-foo"
+    if [[ ! -d "$PIPENV_FOO" ]]; then
+        echo "Creating pipenv test virtualenv"
+        run virtualenv "$PIPENV_FOO" --python=python3
     fi
-    if [[ ! -d "$HOME/.virtualenvs/foodefault/" ]]; then
+
+    echo "Creating test virtualenv"
+    FOOBAR="$(mktemp -d)"
+    run virtualenv "$FOOBAR/.venv" --python=python3
+
+    FOODEFAULT="$HOME/.virtualenvs/foodefault"
+    if [[ ! -d "$FOODEFAULT" ]]; then
         echo "Creating default test virtualenv"
-        run virtualenv "$HOME/.virtualenvs/foodefault" --python=python3
+        run virtualenv "$FOODEFAULT" --python=python3
     fi
 
     unset AUTOSWITCH_MESSAGE_FORMAT
@@ -28,6 +37,10 @@
 
 
 @teardown {
+    rm -rf "$POETRY_FOO"
+    rm -rf "$PIPENV_FOO"
+    rm -rf "$FOOBAR"
+    rm -rf "$FOODEFAULT"
     rm -rf "$TARGET"
     rm -rf "$OLDPWD"
     rm -rf Pipfile
@@ -91,8 +104,8 @@
 @test 'check_venv - Security warning for weak writeable by group permissions' {
     PWD="$TARGET"
 
-    echo "foobar" > "$TARGET/.venv"
-    chmod 600 "$TARGET/.venv"
+    mkdir "$TARGET/.venv"
+    chmod 700 "$TARGET/.venv"
     chmod g+w "$TARGET/.venv"
 
     run check_venv
@@ -100,15 +113,15 @@
     assert $status equals 0
     assert "$lines[1]" same_as "AUTOSWITCH WARNING: Virtualenv will not be activated"
     assert "$lines[2]" is_empty
-    assert "$lines[3]" same_as "Reason: Found a .venv file with weak permission settings (620)."
-    assert "$lines[4]" same_as "Run the following command to fix this: \e[35m\"chmod 600 $TARGET/.venv\"\e[0m"
+    assert "$lines[3]" same_as "Reason: Found a .venv directory with weak permission settings (720)."
+    assert "$lines[4]" same_as "Run the following command to fix this: \e[35m\"chmod 700 $TARGET/.venv\"\e[0m"
 }
 
 @test 'check_venv - Security warning for weak writeable by everyone permissions' {
     PWD="$TARGET"
 
-    echo "foobar" > "$TARGET/.venv"
-    chmod 600 "$TARGET/.venv"
+    mkdir "$TARGET/.venv"
+    chmod 700 "$TARGET/.venv"
     chmod a+w "$TARGET/.venv"
 
     run check_venv
@@ -116,49 +129,46 @@
     assert $status equals 0
     assert "$lines[1]" same_as "AUTOSWITCH WARNING: Virtualenv will not be activated"
     assert "$lines[2]" is_empty
-    assert "$lines[3]" same_as "Reason: Found a .venv file with weak permission settings (622)."
-    assert "$lines[4]" same_as "Run the following command to fix this: \e[35m\"chmod 600 $TARGET/.venv\"\e[0m"
+    assert "$lines[3]" same_as "Reason: Found a .venv directory with weak permission settings (722)."
+    assert "$lines[4]" same_as "Run the following command to fix this: \e[35m\"chmod 700 $TARGET/.venv\"\e[0m"
 }
 
 @test 'check_venv - No security warning for readable by everyone permission' {
-    PWD="$TARGET"
+    PWD="$FOOBAR"
 
-    echo "foobar" > "$TARGET/.venv"
-    chmod 600 "$TARGET/.venv"
-    chmod a+r "$TARGET/.venv"
+    chmod 700 "$FOOBAR/.venv"
+    chmod a+r "$FOOBAR/.venv"
     AUTOSWITCH_DEFAULTENV="foodefault"
 
     run check_venv
 
     assert $status equals 0
-    assert "$output" same_as "Switching virtualenv: \e[1m\e[35mfoobar\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
+    assert "$output" same_as "Switching virtualenv: \e[1m\e[35m$(basename "$FOOBAR")\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
 }
 
 @test 'check_venv - No security warning for readable by group permission' {
-    PWD="$TARGET"
+    PWD="$FOOBAR"
 
-    echo "foobar" > "$TARGET/.venv"
-    chmod 600 "$TARGET/.venv"
-    chmod g+r "$TARGET/.venv"
+    chmod 700 "$FOOBAR/.venv"
+    chmod g+r "$FOOBAR/.venv"
     AUTOSWITCH_DEFAULTENV="foodefault"
 
     run check_venv
 
     assert $status equals 0
-    assert "$output" same_as "Switching virtualenv: \e[1m\e[35mfoobar\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
+    assert "$output" same_as "Switching virtualenv: \e[1m\e[35m$(basename "$FOOBAR")\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
 }
 
 @test 'check_venv - No security warning for readable only by owner permission' {
-    PWD="$TARGET"
+    PWD="$FOOBAR"
 
-    echo "foobar" > "$TARGET/.venv"
-    chmod 600 "$TARGET/.venv"
+    chmod 700 "$FOOBAR/.venv"
     AUTOSWITCH_DEFAULTENV="foodefault"
 
     run check_venv
 
     assert $status equals 0
-    assert "$output" same_as "Switching virtualenv: \e[1m\e[35mfoobar\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
+    assert "$output" same_as "Switching virtualenv: \e[1m\e[35m$(basename "$FOOBAR")\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
 }
 
 
@@ -169,7 +179,7 @@
     run check_venv
 
     assert $status equals 0
-    assert "$output" same_as "Switching virtualenv: \e[1m\e[35mfoodefault\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
+    assert "$output" same_as "Switching default_virtualenv: \e[1m\e[35mfoodefault\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
 }
 
 @test 'check_venv - activate if .venv unavailable but poetry available' {
@@ -192,19 +202,19 @@
     touch "$TARGET/Pipfile"
 
     function pipenv {
-        echo "$HOME/.virtualenvs/foobar"
+        echo "$PIPENV_FOO"
     }
 
     run check_venv
 
     assert $status equals 0
-    assert "$output" same_as "Switching pipenv: \e[1m\e[35mfoobar\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
+    assert "$output" same_as "Switching pipenv: \e[1m\e[35mpipenv\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
 }
 
 
 @test 'check_venv - deactivate if neither .venv nor pipenv available' {
     PWD="$TARGET"
-    VIRTUAL_ENV="foo"
+    VIRTUAL_ENV="$(basename "$TARGET")"
     unset AUTOSWITCH_DEFAULTENV
     function deactivate {
     }
@@ -212,7 +222,7 @@
     run check_venv
 
     assert $status equals 0
-    assert "$output" same_as "Deactivating: \e[1m\e[35mfoo\e[0m"
+    assert "$output" same_as "Deactivating: \e[1m\e[35m$VIRTUAL_ENV\e[0m"
 }
 
 @test 'check_venv - deactivate if neither .venv nor pipenv available (previous dir is pipenv)' {
@@ -233,11 +243,11 @@
 @test 'check_venv - works as intended with .venv available' {
     PWD="$TARGET"
 
-    echo "foobar" > "$TARGET/.venv"
-    chmod 600 "$TARGET/.venv"
+    virtualenv "$TARGET/.venv" --python=python3
+    chmod 700 "$TARGET/.venv"
 
     run check_venv
 
     assert $status equals 0
-    assert "$output" same_as "Switching virtualenv: \e[1m\e[35mfoobar\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
+    assert "$output" same_as "Switching virtualenv: \e[1m\e[35m$(basename "$TARGET")\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
 }

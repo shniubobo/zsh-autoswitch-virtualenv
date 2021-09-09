@@ -2,19 +2,17 @@
 
 
 @setup {
-    TEST_VIRTUALENV="$HOME/.virtualenvs/foobar/"
+    TARGET="$(mktemp -d)"
+    TEST_VIRTUALENV="$TARGET/.venv"
     PYTHON_VERSION="$(python3 --version 2>&1)"
 
-    if [[ ! -d "$TEST_VIRTUALENV" ]]; then
-        printf "Creating test virtualenv: %s" % "$PYTHON_VERSION"
-        run python -m virtualenv "$TEST_VIRTUALENV" --python=python3
-    fi
+    printf "Creating test virtualenv: %s" % "$PYTHON_VERSION"
+    run python -m virtualenv "$TEST_VIRTUALENV" --python=python3
 
     unset AUTOSWITCH_MESSAGE_FORMAT
 
     export DISABLE_AUTOSWITCH_VENV="1"
     load "../autoswitch_virtualenv.plugin.zsh"
-    TARGET="$(mktemp -d)"
 
     LANG=".UTF-8"
 }
@@ -48,40 +46,44 @@
 
 @test '_maybeworkon - switches virtualenv if nothing is activated' {
     VIRTUAL_ENV=""
+    PWD="$TARGET"
 
-    run _maybeworkon "$TEST_VIRTUALENV" virtualenv
+    run _maybeworkon .venv virtualenv
 
     assert $state equals 0
-    assert "$output" same_as "Switching virtualenv: \e[1m\e[35mfoobar\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
+    assert "$output" same_as "Switching virtualenv: \e[1m\e[35m$(basename "$TARGET")\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
 }
 
 @test '_maybeworkon - custom message' {
     VIRTUAL_ENV=""
+    PWD="$TARGET"
     AUTOSWITCH_MESSAGE_FORMAT="Hello %venv_type - this is %venv_name (%py_version)"
 
-    run _maybeworkon "$TEST_VIRTUALENV" cheese
+    run _maybeworkon .venv virtualenv
 
     assert $state equals 0
-    assert "$output" same_as "Hello cheese - this is foobar ($PYTHON_VERSION)"
+    assert "$output" same_as "Hello virtualenv - this is $(basename "$TARGET") ($PYTHON_VERSION)"
 }
 
 @test '_maybeworkon - no emoji on non utf-8 LANG' {
     VIRTUAL_ENV=""
+    PWD="$TARGET"
     LANG="ASCII"
 
-    run _maybeworkon "$TEST_VIRTUALENV" virtualenv
+    run _maybeworkon .venv virtualenv
 
     assert $state equals 0
-    assert "$output" same_as "Switching virtualenv: \e[1m\e[35mfoobar\e[0m \e[32m[$PYTHON_VERSION]\e[0m"
+    assert "$output" same_as "Switching virtualenv: \e[1m\e[35m$(basename "$TARGET")\e[0m \e[32m[$PYTHON_VERSION]\e[0m"
 }
 
 @test '_maybeworkon - switches virtualenv if current virtualenv is different' {
     VIRTUAL_ENV="$HOME/.virtualenvs/default_venv"
+    PWD="$TARGET"
 
-    run _maybeworkon "$TEST_VIRTUALENV" virtualfoo
+    run _maybeworkon .venv virtualenv
 
     assert $state equals 0
-    assert "$output" contains "Switching virtualfoo: \e[1m\e[35mfoobar\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
+    assert "$output" contains "Switching virtualenv: \e[1m\e[35m$(basename "$TARGET")\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
 }
 
 @test '_maybeworkon - switches virtualenv if current virtualenv is different (silent)' {
@@ -95,9 +97,10 @@
 }
 
 @test '_maybeworkon - does not switch to already activated virtualenv' {
-    VIRTUAL_ENV="$HOME/.virtualenvs/bwaaah"
+    VIRTUAL_ENV="$TARGET/.venv"
+    PWD="$TARGET"
 
-    run _maybeworkon bwaaah virtualenv
+    run _maybeworkon "$VIRTUAL_ENV" virtualenv
 
     assert $state equals 0
     assert "$output" is_empty

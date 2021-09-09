@@ -4,6 +4,7 @@
 @setup {
     export DISABLE_AUTOSWITCH_VENV="1"
     load "../autoswitch_virtualenv.plugin.zsh"
+    export AUTOSWITCH_VIRTUAL_ENV_DIR=".venv"
     TARGET="$(mktemp -d)"
 }
 
@@ -12,7 +13,7 @@
 }
 
 @test '_check_path - finds .venv in base directory' {
-    touch "$TARGET/.venv"
+    mkdir "$TARGET/.venv"
 
     run _check_path "$TARGET"
 
