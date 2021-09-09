@@ -335,10 +335,10 @@ function mkvenv()
             return
         fi
 
-        if [[ -f "$AUTOSWITCH_FILE" ]]; then
-            printf "$AUTOSWITCH_FILE file already exists. If this is a mistake use the rmvenv command\n"
+        if [[ -d "$AUTOSWITCH_VIRTUAL_ENV_DIR" ]]; then
+            printf "$AUTOSWITCH_VIRTUAL_ENV_DIR directory already exists. If this is a mistake use the rmvenv command\n"
         else
-            local venv_name="$(basename $PWD)-$(pwgen 8 1)"
+            local venv_name="$AUTOSWITCH_VIRTUAL_ENV_DIR"
 
             printf "Creating ${PURPLE}%s${NONE} virtualenv\n" "$venv_name"
 
@@ -352,13 +352,10 @@ function mkvenv()
             fi
 
             if [[ ${params[(I)--verbose]} -eq 0 ]]; then
-                virtualenv $params "$(_virtual_env_dir "$venv_name")"
+                virtualenv $params "$PWD/$(_virtual_env_dir "$venv_name")"
             else
-                virtualenv $params "$(_virtual_env_dir "$venv_name")" > /dev/null
+                virtualenv $params "$PWD/$(_virtual_env_dir "$venv_name")" > /dev/null
             fi
-
-            printf "$venv_name\n" > "$AUTOSWITCH_FILE"
-            chmod 600 "$AUTOSWITCH_FILE"
 
             _maybeworkon "$(_virtual_env_dir "$venv_name")" "virtualenv"
 

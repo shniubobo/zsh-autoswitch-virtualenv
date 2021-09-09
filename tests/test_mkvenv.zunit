@@ -1,10 +1,6 @@
 #!/usr/bin/env zunit
 
 @setup {
-    function virtualenv {
-        echo virtualenv $@
-    }
-
     export DISABLE_AUTOSWITCH_VENV="1"
     load "../autoswitch_virtualenv.plugin.zsh"
     unset AUTOSWITCH_DEFAULT_REQUIREMENTS
@@ -33,12 +29,12 @@
 }
 
 @test 'mkvenv - does not create .venv if one exists' {
-    touch .venv
+    mkdir .venv
 
     run mkvenv
 
     assert $status equals 0
-    assert "$output" same_as ".venv file already exists. If this is a mistake use the rmvenv command"
+    assert "$output" same_as ".venv directory already exists. If this is a mistake use the rmvenv command"
 }
 
 
@@ -50,11 +46,7 @@
 
     assert $status equals 0
     assert "$TARGET/myproject/.venv" exists
-
-    run cat "$TARGET/myproject/.venv"
-
-    assert $status equals 0
-    assert "$output" matches "myproject-[a-zA-Z0-9]{8}"
+    assert "$TARGET/myproject/.venv/bin/activate" is_file
 }
 
 @test 'mkvenv - (poetry project) runs correct command' {
@@ -82,6 +74,10 @@
 }
 
 @test 'mkvenv - uses default python if set and not specified' {
+    function virtualenv {
+        echo virtualenv $@
+    }
+
     mkdir myproject
     cd myproject
     AUTOSWITCH_DEFAULT_PYTHON="python_foo"
@@ -94,13 +90,8 @@
 
     expected='Using $AUTOSWITCH_DEFAULT_PYTHON=python_foo'
     assert "$lines[2]" contains "$expected"
-    expected="virtualenv --python=python_foo $HOME/.virtualenvs/myproject-"
-    assert "$lines[3]" contains "$expected"
-
-    run cat "$TARGET/myproject/.venv"
-
-    assert $status equals 0
-    assert "$output" matches "myproject-[a-zA-Z0-9]{8}"
+    expected="virtualenv --python=python_foo $TARGET/myproject/.venv"
+    assert "$lines[3]" same_as "$expected"
 }
 
 @test 'mkvenv - uses specified python if default set' {
@@ -118,12 +109,7 @@
     assert $status equals 0
     assert "$TARGET/myproject/.venv" exists
     # Assert mock output
-    assert "$lines[2]" contains "virtualenv --python=python_bar $HOME/.virtualenvs/myproject-"
-
-    run cat "$TARGET/myproject/.venv"
-
-    assert $status equals 0
-    assert "$output" matches "myproject-[a-zA-Z0-9]{8}"
+    assert "$lines[2]" same_as "virtualenv --python=python_bar $TARGET/myproject/.venv"
 }
 
 @test 'prints help message and disables plugin if virtualenv not setup' {
