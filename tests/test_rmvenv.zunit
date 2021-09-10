@@ -36,23 +36,18 @@
 
 @test 'rmvenv - removes .venv if present' {
     # lightweight simulation of creating a virtualenv
-    mkdir -p "$HOME/.virtualenvs/12345"
-
-    echo "12345" > .venv
+    mkdir -p .venv
 
     run rmvenv
 
     assert $state equals 0
-    assert "$output" same_as "Removing \e[35m12345\e[0m..."
-    test ! -f .venv
-    test ! -d "$HOME/.virtualenvs/12345"
+    assert "$output" same_as "Removing \e[35m$(basename "$TARGET")\e[0m..."
+    test ! -d .venv
 }
 
 @test 'rmvenv - removes .venv if present with function' {
     # lightweight simulation of creating a virtualenv
-    mkdir -p "$HOME/.virtualenvs/54321"
-
-    echo "54321" > .venv
+    mkdir -p .venv
 
     # Interfere with rm executable (in normal use alias or function would do the same).
     function rm(){ : }
@@ -60,22 +55,19 @@
     run rmvenv
 
     assert $state equals 0
-    assert "$output" same_as "Removing \e[35m54321\e[0m..."
-    test ! -f .venv
-    test ! -d "$HOME/.virtualenvs/54321"
+    assert "$output" same_as "Removing \e[35m$(basename "$TARGET")\e[0m..."
+    test ! -d .venv
 }
 
 @test 'rmvenv - removes .venv and deactivates if currently active' {
-    test_venv="$(basename $PWD)"
     run mkvenv
-    target_venv="$(<.venv)"
 
     run rmvenv
 
     assert $state equals 0
-    assert "$output" same_as "Removing \e[35m$target_venv\e[0m..."
-    test ! -f .venv
-    test ! -d "$HOME/.virtualenvs/$test_venv"
+    assert "$output" same_as "Removing \e[35m$(basename "$TARGET")\e[0m..."
+    assert "$VIRTUAL_ENV" different_to "$TARGET/.venv"
+    test ! -d .venv
 }
 
 @test 'rmvenv - uninstalls poetry project' {

@@ -270,13 +270,14 @@ function rmvenv()
         deactivate
         poetry env remove "$(poetry run which python)"
     else
-        if [[ -f "$AUTOSWITCH_FILE" ]]; then
-            local venv_name="$(<$AUTOSWITCH_FILE)"
+        if [[ -d "$AUTOSWITCH_VIRTUAL_ENV_DIR" ]]; then
+            local venv_name="$(_get_venv_name "$PWD" "virtualenv")"
+            local venv_dir="$PWD/$AUTOSWITCH_VIRTUAL_ENV_DIR"
 
             # detect if we need to switch virtualenv first
             if [[ -n "$VIRTUAL_ENV" ]]; then
-                local current_venv="$(basename $VIRTUAL_ENV)"
-                if [[ "$current_venv" = "$venv_name" ]]; then
+                local current_venv_dir="$VIRTUAL_ENV"
+                if [[ "$current_venv_dir" = "$venv_dir" ]]; then
                     _default_venv
                 fi
             fi
@@ -286,10 +287,9 @@ function rmvenv()
             # rm should always be found in this location according to
             # https://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch03s04.html
             # https://www.freedesktop.org/wiki/Software/systemd/TheCaseForTheUsrMerge/
-            /bin/rm -rf "$(_virtual_env_dir "$venv_name")"
-            /bin/rm "$AUTOSWITCH_FILE"
+            /bin/rm -rf "$venv_dir"
         else
-            printf "No $AUTOSWITCH_FILE file in the current directory!\n"
+            printf "No $AUTOSWITCH_VIRTUAL_ENV_DIR file in the current directory!\n"
         fi
     fi
 }
