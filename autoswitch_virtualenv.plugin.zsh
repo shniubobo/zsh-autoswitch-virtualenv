@@ -23,12 +23,11 @@ function _validated_source() {
 
 function _virtual_env_dir() {
     local venv_name="$1"
-    local VIRTUAL_ENV_DIR="${AUTOSWITCH_VIRTUAL_ENV_DIR:-$HOME/.virtualenvs}"
-    mkdir -p "$VIRTUAL_ENV_DIR"
-    if [[ "$VIRTUAL_ENV_DIR" == "$AUTOSWITCH_VIRTUAL_ENV_DIR" ]]; then
-        printf "$VIRTUAL_ENV_DIR"
+    local venv_type="${2:-"virtualenv"}"
+    if [[ "$venv_type" == "default_virtualenv" ]]; then
+        printf "%s/%s" "$HOME/.virtualenvs" "$venv_name"
     else
-        printf "%s/%s" "$VIRTUAL_ENV_DIR" "$venv_name"
+        printf "$AUTOSWITCH_VIRTUAL_ENV_DIR"
     fi
 }
 
@@ -69,7 +68,7 @@ function _get_venv_name() {
     local venv_dir="$1"
     local venv_type="$2"
     if [[ "$venv_type" == "virtualenv" && "$venv_dir" != "/"* ]]; then
-        local venv_name="$(basename "$(realpath "$(dirname "$PWD/$AUTOSWITCH_VIRTUAL_ENV_DIR")")")"
+        local venv_name="$(basename "$(realpath "$(dirname "$(_check_path "$PWD")")")")"
     elif [[ "$venv_type" == "default_virtualenv" && "$venv_dir" != "/"* ]]; then
         local venv_name="$(basename "$(realpath "$(dirname "$AUTOSWITCH_DEFAULTENV/$AUTOSWITCH_VIRTUAL_ENV_DIR")")")"
     else
@@ -100,6 +99,12 @@ function _maybeworkon() {
     # Don't reactivate an already activated virtual environment
     if [[ -z "$VIRTUAL_ENV" || "$venv_name" != "$(_get_venv_name $VIRTUAL_ENV $venv_type)" ]]; then
 
+        # Ensure correct venv_dir when in subdirectories of project
+        # Absolute path indicates poetry, pipenv or default_virtualenv
+        if [[ "$venv_dir" != "/"* ]]; then
+            venv_dir="$(_check_path "$PWD")"
+        fi
+
         if [[ ! -d "$venv_dir" ]]; then
             printf "Unable to find ${PURPLE}$venv_name${NORMAL} virtualenv\n"
             printf "If the issue persists run ${PURPLE}rmvenv && mkvenv${NORMAL} in this directory\n"
@@ -109,7 +114,7 @@ function _maybeworkon() {
         if [[ "$venv_type" == "default_virtualenv" ]]; then
             local py_version="$(_python_version "$HOME/.virtualenvs/$AUTOSWITCH_DEFAULTENV/bin/python")"
         elif [[ "$venv_type" == "virtualenv" ]]; then
-            local py_version="$(_python_version "$PWD/$venv_dir/bin/python")"
+            local py_version="$(_python_version "$venv_dir/bin/python")"
         else
             local py_version="$(_python_version "$venv_dir/bin/python")"
         fi
@@ -129,7 +134,7 @@ function _maybeworkon() {
         if [[ "$venv_type" == "default_virtualenv" && "$venv_dir" != "/"* ]]; then
             local activate_script="$HOME/.virtualenvs/$AUTOSWITCH_DEFAULTENV/bin/activate"
         elif [[ "$venv_type" == "virtualenv" && "$venv_dir" != "/"* ]]; then
-            local activate_script="$PWD/$venv_dir/bin/activate"
+            local activate_script="$(_check_path "$PWD")/bin/activate"
         else
             # poetry, pipenv or absolute path
             local activate_script="${venv_dir%'/'}/bin/activate"
@@ -222,8 +227,7 @@ function check_venv()
                     return
                 fi
             else
-                local switch_to="$(<"$venv_path")"
-                _maybeworkon "$(_virtual_env_dir "$switch_to")" "virtualenv"
+                _maybeworkon "$(_virtual_env_dir "$venv_path")" "virtualenv"
                 return
             fi
         fi
@@ -243,10 +247,10 @@ function check_venv()
 # Switch to the default virtual environment
 function _default_venv()
 {
-    local venv_type="$(_get_venv_type "$OLDPWD")"
     if [[ -n "$AUTOSWITCH_DEFAULTENV" ]]; then
-        _maybeworkon "$(_virtual_env_dir "$AUTOSWITCH_DEFAULTENV")" "default_$venv_type"
+        _maybeworkon "$(_virtual_env_dir "$AUTOSWITCH_DEFAULTENV" "default_virtualenv")" "default_virtualenv"
     elif [[ -n "$VIRTUAL_ENV" ]]; then
+        local venv_type="$(_get_venv_type "$OLDPWD")"
         local venv_name="$(_get_venv_name "$VIRTUAL_ENV" "$venv_type")"
         _autoswitch_message "Deactivating: ${BOLD}${PURPLE}%s${NORMAL}\n" "$venv_name"
         deactivate

@@ -12,6 +12,10 @@
     LANG=".UTF-8"
 }
 
+@teardown {
+    rm -rf "$HOME/.virtualenvs/foobar/"
+}
+
 @test 'correct version exported' {
     unset AUTOSWITCH_DEFAULTENV
     load ../autoswitch_virtualenv.plugin.zsh
@@ -44,13 +48,13 @@
     enable_autoswitch_virtualenv
 
     TEMP_DIR="$(mktemp -d)"
-    echo "foobar" > "$TEMP_DIR/.venv"
-    chmod 600 "$TEMP_DIR/.venv"
+    virtualenv "$TEMP_DIR/.venv"
+    chmod 700 "$TEMP_DIR/.venv"
 
     run cd "$TEMP_DIR"
 
     assert $status equals 0
-    assert "$output" same_as "Switching virtualenv: \e[1m\e[35mfoobar\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
+    assert "$output" same_as "Switching virtualenv: \e[1m\e[35m$(basename "$TEMP_DIR")\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
 
     mkdir "$TEMP_DIR/foo"
 
@@ -58,5 +62,5 @@
     run cd "$TEMP_DIR/foo"
 
     assert $status equals 0
-    assert "$output" same_as "Switching virtualenv: \e[1m\e[35mfoobar\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
+    assert "$output" same_as "Switching virtualenv: \e[1m\e[35m$(basename "$TEMP_DIR")\e[0m \e[32m[🐍$PYTHON_VERSION]\e[0m"
 }

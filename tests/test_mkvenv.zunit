@@ -76,6 +76,7 @@
 @test 'mkvenv - uses default python if set and not specified' {
     function virtualenv {
         echo virtualenv $@
+        mkdir -p "$2"
     }
 
     mkdir myproject
@@ -98,6 +99,7 @@
     # mock virtualenv function to test its inputs
     function virtualenv {
         echo virtualenv $@
+        mkdir -p "$2"
     }
 
     mkdir myproject
