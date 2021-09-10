@@ -3,7 +3,7 @@
 @setup {
     if [[ ! -d "$HOME/.virtualenvs/foobar/" ]]; then
         echo "Creating test virtualenv"
-        run virtualenv "$HOME/.virtualenvs/foobar" --python=python3
+        run virtualenv "$HOME/.virtualenvs/foobar" --python=python3 > /dev/null
     fi
     unset VIRTUAL_ENV
     unset AUTOSWITCH_MESSAGE_FORMAT

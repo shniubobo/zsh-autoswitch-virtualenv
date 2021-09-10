@@ -5,23 +5,23 @@
     POETRY_FOO="$HOME/.cache/pypoetry/virtualenvs/poetry-foo"
     if [[ ! -d "$POETRY_FOO" ]]; then
         echo "Creating poetry test virtualenv"
-        run virtualenv "$POETRY_FOO" --python=python3
+        run virtualenv "$POETRY_FOO" --python=python3 > /dev/null
     fi
 
     PIPENV_FOO="$HOME/.virtualenvs/pipenv-foo"
     if [[ ! -d "$PIPENV_FOO" ]]; then
         echo "Creating pipenv test virtualenv"
-        run virtualenv "$PIPENV_FOO" --python=python3
+        run virtualenv "$PIPENV_FOO" --python=python3 > /dev/null
     fi
 
     echo "Creating test virtualenv"
     FOOBAR="$(mktemp -d)"
-    run virtualenv "$FOOBAR/.venv" --python=python3
+    run virtualenv "$FOOBAR/.venv" --python=python3 > /dev/null
 
     FOODEFAULT="$HOME/.virtualenvs/foodefault"
     if [[ ! -d "$FOODEFAULT" ]]; then
         echo "Creating default test virtualenv"
-        run virtualenv "$FOODEFAULT" --python=python3
+        run virtualenv "$FOODEFAULT" --python=python3 > /dev/null
     fi
 
     unset AUTOSWITCH_MESSAGE_FORMAT
