@@ -251,7 +251,7 @@ function _default_venv()
         _maybeworkon "$(_virtual_env_dir "$AUTOSWITCH_DEFAULTENV" "default_virtualenv")" "default_virtualenv"
     elif [[ -n "$VIRTUAL_ENV" ]]; then
         local venv_type="$(_get_venv_type "$OLDPWD")"
-        local venv_name="$(_get_venv_name "$VIRTUAL_ENV" "$venv_type")"
+        local venv_name="$(_get_venv_name "${VIRTUAL_ENV%"/.venv"}" "$venv_type")"
         _autoswitch_message "Deactivating: ${BOLD}${PURPLE}%s${NORMAL}\n" "$venv_name"
         deactivate
     fi

@@ -214,7 +214,7 @@
 
 @test 'check_venv - deactivate if neither .venv nor pipenv available' {
     PWD="$TARGET"
-    VIRTUAL_ENV="$(realpath "$(basename "$TARGET")")"
+    VIRTUAL_ENV="$FOOBAR/.venv"
     unset AUTOSWITCH_DEFAULTENV
     function deactivate {
     }
@@ -222,14 +222,14 @@
     run check_venv
 
     assert $status equals 0
-    assert "$output" same_as "Deactivating: \e[1m\e[35m$(basename "$TARGET")\e[0m"
+    assert "$output" same_as "Deactivating: \e[1m\e[35m$(basename "$FOOBAR")\e[0m"
 }
 
 @test 'check_venv - deactivate if neither .venv nor pipenv available (previous dir is pipenv)' {
     PWD="$TARGET"
     touch "$OLDPWD/Pipfile"
 
-    VIRTUAL_ENV="foo-bar-defa23"
+    VIRTUAL_ENV="/path/to/foo-bar-defa23"
     unset AUTOSWITCH_DEFAULTENV
     function deactivate {
     }
