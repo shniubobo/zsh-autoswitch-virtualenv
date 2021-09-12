@@ -425,12 +425,8 @@ function disable_autoswitch_virtualenv() {
 function _autoswitch_startup() {
     add-zsh-hook -D precmd _startup
 
-    if ! type pwgen 1>/dev/null; then
-        printf "${PURPLE}pwgen is required for zsh-autoswitch-virtualenv to run${NONE}\n"
-    else
-        enable_autoswitch_virtualenv
-        check_venv
-    fi
+    enable_autoswitch_virtualenv
+    check_venv
 }
 
 autoload -Uz add-zsh-hook
