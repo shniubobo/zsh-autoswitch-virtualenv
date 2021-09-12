@@ -423,7 +423,7 @@ function disable_autoswitch_virtualenv() {
 # immediately removes itself from the zsh-hook.
 # This seems important for "instant prompt" zsh themes like powerlevel10k
 function _autoswitch_startup() {
-    add-zsh-hook -D precmd _startup
+    add-zsh-hook -d precmd _autoswitch_startup
 
     enable_autoswitch_virtualenv
     check_venv
