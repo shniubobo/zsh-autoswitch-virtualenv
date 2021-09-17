@@ -344,7 +344,7 @@ function mkvenv()
         else
             local venv_name="$AUTOSWITCH_VIRTUAL_ENV_DIR"
 
-            printf "Creating ${PURPLE}%s${NONE} virtualenv\n" "$venv_name"
+            printf "Creating ${PURPLE}%s${NORMAL} virtualenv\n" "$venv_name"
 
 
             if [[ -n "$AUTOSWITCH_DEFAULT_PYTHON" && ${params[(I)--python*]} -eq 0 ]]; then
