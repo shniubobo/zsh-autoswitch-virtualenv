@@ -47,6 +47,14 @@
     assert $status equals 0
     assert "$TARGET/myproject/.venv" exists
     assert "$TARGET/myproject/.venv/bin/activate" is_file
+
+    /usr/bin/stat --version &> /dev/null
+    if [[ $? -eq 0 ]]; then   # Linux, or GNU stat
+        file_permissions="$(/usr/bin/stat -c %a "$TARGET/myproject/.venv")"
+    else                      # macOS, or FreeBSD stat
+        file_permissions="$(/usr/bin/stat -f %OLp "$TARGET/myproject/.venv")"
+    fi
+    assert "$file_permissions" equals "700"
 }
 
 @test 'mkvenv - (poetry project) runs correct command' {

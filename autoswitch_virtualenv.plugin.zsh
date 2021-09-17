@@ -360,6 +360,7 @@ function mkvenv()
             else
                 virtualenv $params "$PWD/$(_virtual_env_dir "$venv_name")" > /dev/null
             fi
+            chmod 700 "$PWD/$(_virtual_env_dir "$venv_name")"
 
             _maybeworkon "$(_virtual_env_dir "$venv_name")" "virtualenv"
 
