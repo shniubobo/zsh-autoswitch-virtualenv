@@ -36,7 +36,7 @@
 @test '_maybeworkon - error message if virtualenv can not be found' {
     VIRTUAL_ENV=""
 
-    run _maybeworkon $HOME/.virtualenvs/idontexist virtualenv
+    run _maybeworkon /path/to/idontexist/.venv virtualenv
 
     assert $state equals 0
     assert "${lines[1]}" same_as "Unable to find \e[35midontexist\e[0m virtualenv"

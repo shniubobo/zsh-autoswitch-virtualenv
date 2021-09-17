@@ -69,11 +69,16 @@ function _get_venv_name() {
     local venv_type="$2"
     if [[ "$venv_type" == "virtualenv" && "$venv_dir" != "/"* ]]; then
         local venv_name="$(basename "$(realpath "$(dirname "$(_check_path "$PWD")")")")"
-    elif [[ "$venv_type" == "default_virtualenv" && "$venv_dir" != "/"* ]]; then
-        local venv_name="$(basename "$(realpath "$(dirname "$AUTOSWITCH_DEFAULTENV/$AUTOSWITCH_VIRTUAL_ENV_DIR")")")"
+    elif [[ "$venv_type" == "default_virtualenv" ]]; then
+        local venv_name="$(basename "$(dirname "$AUTOSWITCH_DEFAULTENV/$AUTOSWITCH_VIRTUAL_ENV_DIR")")"
     else
-        # poetry, pipenv or absolute path
-        local venv_name="$(basename "$venv_dir")"
+        if [[ "$venv_type" == "virtualenv" ]]; then
+            # Absolute path
+            local venv_name="$(basename "$(dirname "$venv_dir")")"
+        else
+            # poetry, pipenv
+            local venv_name="$(basename "$venv_dir")"
+        fi
     fi
 
     # clear pipenv from the extra identifiers at the end
@@ -251,7 +256,7 @@ function _default_venv()
         _maybeworkon "$(_virtual_env_dir "$AUTOSWITCH_DEFAULTENV" "default_virtualenv")" "default_virtualenv"
     elif [[ -n "$VIRTUAL_ENV" ]]; then
         local venv_type="$(_get_venv_type "$OLDPWD")"
-        local venv_name="$(_get_venv_name "${VIRTUAL_ENV%"/.venv"}" "$venv_type")"
+        local venv_name="$(_get_venv_name "$VIRTUAL_ENV" "$venv_type")"
         _autoswitch_message "Deactivating: ${BOLD}${PURPLE}%s${NORMAL}\n" "$venv_name"
         deactivate
     fi
@@ -271,7 +276,7 @@ function rmvenv()
         poetry env remove "$(poetry run which python)"
     else
         if [[ -d "$AUTOSWITCH_VIRTUAL_ENV_DIR" ]]; then
-            local venv_name="$(_get_venv_name "$PWD" "virtualenv")"
+            local venv_name="$(_get_venv_name "$PWD/$AUTOSWITCH_VIRTUAL_ENV_DIR" "virtualenv")"
             local venv_dir="$PWD/$AUTOSWITCH_VIRTUAL_ENV_DIR"
 
             # detect if we need to switch virtualenv first
